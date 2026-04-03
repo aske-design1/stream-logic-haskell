@@ -32,8 +32,6 @@ instance Num SOutput where
     negate (Num a) = Num (negate a)
     negate _ = undefined
 
-
-
 -- Types
 type EIoT = Maybe (String, Int, Verdict)
 

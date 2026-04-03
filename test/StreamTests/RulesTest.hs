@@ -28,12 +28,22 @@ testConstantVal = TestCase $
         (funcMap2, _) = evalExpr (Val (VNum 45)) 1 funcMap1
         (funcMap3, _) = evalExpr (Val (VStr "Hello World!")) 2 funcMap2
     in
-        assertEqual "Should return 30" ((funcMap3 M.! 0) 0 Nothing 25) (Num 30) >>
-        assertEqual "Should return 30" ((funcMap3 M.! 0) 2 Nothing 50) (Num 30) >>
-        assertEqual "Should return 45" ((funcMap3 M.! 1) 0 Nothing 670) (Num 45) >>
-        assertEqual "Should return \"Hello World!\"" ((funcMap3 M.! 2) 0 Nothing 3000) (Str "Hello World!")
+        assertEqual "Should return 30"                  (Num 30) ((funcMap3 M.! 0) 0 Nothing 25)   >>
+        assertEqual "Should return 30"                  (Num 30) ((funcMap3 M.! 0) 2 Nothing 50)   >>
+        assertEqual "Should return 45"                  (Num 45) ((funcMap3 M.! 1) 0 Nothing 670)  >>
+        assertEqual "Should return \"Hello World!\""    (Str "Hello World!") ((funcMap3 M.! 2) 0 Nothing 3000) 
 
---todo: Member
+testMembers = TestCase $
+    let 
+        expr1 = Val . Member $ Name
+        expr2 = Val . Member $ Power
+        expr3 = Val . Member $ Active
+
+        device = Just ("Roomba", 50, TTrue)
+    in
+        assertEqual "Should return device name"                     (Num 30) (s 0 expr2 0 device 25) >>
+        assertEqual "Should return the device power"                (Num 30) (s 0 expr2 0 device 25) >>
+        assertEqual "Should return whether device is active or not" (Num 45) (s 0 expr2 0 device 25)
 
 testBinaryOperationPlus = TestCase $
     let
@@ -41,9 +51,9 @@ testBinaryOperationPlus = TestCase $
         expr = BinOp Plus valExpr valExpr
 
     in
-        assertEqual "Should return 30" (s 1 expr 0 Nothing 25) (Num 30) >>
-        assertEqual "Should return 30" (s 2 expr 0 Nothing 25) (Num 30) >>
-        assertEqual "Should return 60" (s 0 expr 0 Nothing 25) (Num 60)
+        assertEqual "Should return 30" (Num 30) (s 1 expr 0 Nothing 25)  >>
+        assertEqual "Should return 30" (Num 30) (s 2 expr 0 Nothing 25)  >>
+        assertEqual "Should return 60" (Num 60) (s 0 expr 0 Nothing 25) 
 
 testBinaryOperationLogicalOr = TestCase $
     let
@@ -55,8 +65,8 @@ testBinaryOperationLogicalOr = TestCase $
         expr1 = BinOp LogicalOr ff ff
         expr2 = BinOp LogicalOr ff tt
     in
-        assertEqual "Should be false" (s 0 expr1 0 Nothing 25) (Ver FFalse) >>
-        assertEqual "Should be true" (s 0 expr2 0 Nothing 25) (Ver TTrue)
+        assertEqual "Should be false" (Ver FFalse) (s 0 expr1 0 Nothing 25) >>
+        assertEqual "Should be true" (Ver TTrue) (s 0 expr2 0 Nothing 25) 
 
 testStreamAmount = TestCase $
     let
@@ -82,8 +92,8 @@ testUnaryOperationLogicalNot = TestCase $
         expr1 = notExpr tt
         expr2 = notExpr $ notExpr tt
     in
-        assertEqual "Should be false" (s 0 expr1 0 Nothing 25) (Ver FFalse) >>
-        assertEqual "Should be true" (s 0 expr2 0 Nothing 25) (Ver TTrue)
+        assertEqual "Should be false" (Ver FFalse) (s 0 expr1 0 Nothing 25)  >>
+        assertEqual "Should be true" (Ver TTrue) (s 0 expr2 0 Nothing 25) 
 
 testUnaryOperationNegate = TestCase $
     let 
@@ -93,8 +103,8 @@ testUnaryOperationNegate = TestCase $
         expr1 = negateExpr 30
         expr2 = negateExpr (-20)
     in
-        assertEqual "Should be false" (s 0 expr1 0 Nothing 25) (Num (-30)) >>
-        assertEqual "Should be true" (s 0 expr2 0 Nothing 25) (Num 20)
+        assertEqual "Should be false" (Num (-30)) (s 0 expr1 0 Nothing 25)  >>
+        assertEqual "Should be true" (Num 20) (s 0 expr2 0 Nothing 25) 
 
 testAlwaysExpression = TestCase $
     let
@@ -107,16 +117,15 @@ testAlwaysExpression = TestCase $
 
         expr1 = gUnbounded boolExpr
         expr2 = gBounded boolExpr
-
     in
-        assertEqual "Should be undecided" (s 0 expr1 0 Nothing 39) (Ver Undecided) >>
-        assertEqual "Should be False" (s 0 expr1 0 Nothing 45) (Ver FFalse) >>
-        assertEqual "Should be False" (s 0 expr1 40 Nothing 45) (Ver FFalse) >>
+        assertEqual "Should be undecided"   (Ver Undecided) (s 0 expr1 0 Nothing 39)  >>
+        assertEqual "Should be False"       (Ver FFalse)    (s 0 expr1 0 Nothing 45)  >>
+        assertEqual "Should be False"       (Ver FFalse)    (s 0 expr1 40 Nothing 45) >>
         
-        assertEqual "Should be true" (s 0 expr2 0 Nothing 31) (Ver TTrue) >>
-        assertEqual "Should be Undecided" (s 0 expr2 10 Nothing 39) (Ver Undecided) >>
-        assertEqual "Should be False" (s 0 expr2 20 Nothing 49) (Ver FFalse) >>
-        assertEqual "Should be False" (s 0 expr2 20 Nothing 60) (Ver FFalse)
+        assertEqual "Should be true"        (Ver TTrue)     (s 0 expr2 0 Nothing 31)  >>
+        assertEqual "Should be Undecided"   (Ver Undecided) (s 0 expr2 10 Nothing 39) >>
+        assertEqual "Should be False"       (Ver FFalse)    (s 0 expr2 20 Nothing 49) >>
+        assertEqual "Should be False"       (Ver FFalse)    (s 0 expr2 20 Nothing 60) 
 
 testEventuallyExpression = TestCase $
     let
@@ -129,7 +138,6 @@ testEventuallyExpression = TestCase $
 
         expr1 = gUnbounded boolExpr
         expr2 = gBounded boolExpr
-
     in
         assertEqual "Should be undecided" (Ver Undecided) (s 0 expr1 0 Nothing 39)  >>
         assertEqual "Should be True"      (Ver TTrue)     (s 0 expr1 0 Nothing 40)  >>

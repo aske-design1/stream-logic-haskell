@@ -12,5 +12,5 @@ initEnv = (M.empty, M.empty, M.empty) :: Env
 
 -- todo: Set up func to start conversion
 convertCSTToStreams :: Program -> Env
-convertCSTToStreams _ = initEnv
+convertCSTToStreams _ = undefined
 

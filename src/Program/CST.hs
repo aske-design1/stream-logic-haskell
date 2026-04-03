@@ -1,6 +1,5 @@
 module Program.CST where
 
-
 data BinaryOp = 
     Plus | 
     Minus | 
@@ -13,7 +12,7 @@ data UnaryOp =
     Negate | 
     LogicalNot deriving (Show, Eq) 
 
-data Member = Power | Active | Name 
+data Member = Name | Power | Active
     deriving (Show, Eq)
 
 data Value = 

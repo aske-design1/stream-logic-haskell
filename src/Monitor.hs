@@ -1,8 +1,13 @@
 module Monitor where
 
-import Stream.Types ( StreamD, getVerSafe )
+import Stream.Types ( StreamD, getVerSafe, Env )
 import Stream.Verdict ( Verdict (Undecided, TTrue), vConjunction, )
 import Data.Maybe
+import qualified Data.IntMap as M
+
+initEnv :: Env
+initEnv = (M.empty, M.empty, M.empty) :: Env
+
 
 
 -- Utility to run the monitor over a range [0..n]
