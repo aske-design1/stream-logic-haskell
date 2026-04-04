@@ -95,7 +95,7 @@ library
 test-suite stream-logic-haskell-tests
   type:                exitcode-stdio-1.0
   main-is:             TestMain.hs
-  other-modules:       StreamTests.VerdictTest, StreamTests.RulesTest
+  other-modules:       StreamTests.VerdictTest, StreamTests.ExpressionTests, StreamTests.PropertyTests
   hs-source-dirs:      test
   build-depends:       base,
                        containers ^>=0.6.7,

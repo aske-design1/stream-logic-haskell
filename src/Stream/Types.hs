@@ -43,8 +43,8 @@ type Devices = S.Seq [IoT]
 type SDIState = IntM.IntMap Verdict
 data StreamOutState = State {
     verdicts :: SDIState,
-    insert :: Int -> SDIState -> SDIState,
-    update :: Devices  -> Int -> SDIState -> SDIState,
+    insert :: SDIState -> Int -> SDIState,
+    update :: SDIState -> Devices  -> Int -> SDIState,
     getColVerdict :: SDIState -> Verdict,
     cleanUp :: SDIState -> SDIState
 }

@@ -10,7 +10,7 @@ import Stream.Types
     ( Env,
       getVerUnsafe,
       StreamOutState(State, cleanUp, verdicts, insert, update,
-                     getColVerdict) )
+                     getColVerdict), SDIState, Devices )
 import Stream.Rules.Expression (evalExpr)
 import Stream.Verdict (Verdict(..), (&&&), (|||))
 
@@ -24,9 +24,10 @@ evalProp (Prop mtl bounds e) k (so, sd) = ((M.insert k streamO so, sd'), k')
     where
         (sd', k') = evalExpr e (k + 1) sd
 
-        insertFunc None t stream  = M.insert t Undecided stream
-        insertFunc (Range r1 r2) t stream  = if r1 <= t && t <= r2 then M.insert t Undecided stream else stream
-        updateFunc s ds t = M.mapWithKey (\i _ -> getVerUnsafe $ s i ds Nothing t)
+        insertFunc None stream t   = M.insert t Undecided stream
+        insertFunc (Range r1 r2) stream t = if r1 <= t && t <= r2 then M.insert t Undecided stream else stream
+
+        updateFunc s so' ds t = M.mapWithKey (\i _ -> getVerUnsafe $ s i ds Nothing t) so'
         
         getColVerdictFunc Always = M.foldl (&&&) TTrue
         getColVerdictFunc Eventually = M.foldl (|||) FFalse

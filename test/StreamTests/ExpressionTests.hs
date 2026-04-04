@@ -1,4 +1,4 @@
-module StreamTests.RulesTest where
+module StreamTests.ExpressionTests where
 
 import Test.HUnit
 import Program.CST
@@ -6,14 +6,11 @@ import Program.CST
 import qualified Data.IntMap as M
 import Stream.Rules.Expression
 import Stream.Types
-import Data.IntMap
 import Stream.Verdict (Verdict(FFalse, TTrue, Undecided))
 import Data.Sequence as S
 
 devices = S.empty
-
 initExprEval expr = evalExpr expr 0 M.empty
-
 s idx = (M.! idx) . fst . initExprEval
 
 testTimeVal = TestCase $
@@ -37,21 +34,17 @@ testConstantVal = TestCase $
 
 testMembers = TestCase $
     let
-        expr1 = Val . Member $ Name
-        expr2 = Val . Member $ Power
-        expr3 = Val . Member $ Active
-
+        expr = Val . Member 
         device = Just ("Roomba", 50, TTrue)
     in
-        assertEqual "Should return device name"                     (Num 30) (s 0 expr2 0 devices device 25) >>
-        assertEqual "Should return the device power"                (Num 30) (s 0 expr2 0 devices device 25) >>
-        assertEqual "Should return whether device is active or not" (Num 45) (s 0 expr2 0 devices device 25)
+        assertEqual "Should return device name"                     (Num 30) (s 0 (expr Name) 0 devices device 25) >>
+        assertEqual "Should return the device power"                (Num 30) (s 0 (expr Power) 0 devices device 25) >>
+        assertEqual "Should return whether device is active or not" (Num 45) (s 0 (expr Active) 0 devices device 25)
 
 testBinaryOperationPlus = TestCase $
     let
         valExpr = Val (VNum 30)
         expr = BinOp Plus valExpr valExpr
-
     in
         assertEqual "Should return 30" (Num 30) (s 1 expr 0 devices Nothing 25)  >>
         assertEqual "Should return 30" (Num 30) (s 2 expr 0 devices Nothing 25)  >>
@@ -63,21 +56,17 @@ testBinaryOperationLogicalOr = TestCase $
         numVal = Val . VNum
         tt = lt (numVal 0) (numVal 5)
         ff = lt (numVal 5) (numVal 5)
-
-        expr1 = BinOp LogicalOr ff ff
-        expr2 = BinOp LogicalOr ff tt
+        expr = BinOp LogicalOr
     in
-        assertEqual "Should be false" (Ver FFalse) (s 0 expr1 0 devices Nothing 25) >>
-        assertEqual "Should be true" (Ver TTrue) (s 0 expr2 0 devices Nothing 25)
+        assertEqual "Should be false" (Ver FFalse) (s 0 (expr ff ff) 0 devices Nothing 25) >>
+        assertEqual "Should be true" (Ver TTrue) (s 0 (expr ff tt) 0 devices Nothing 25)
 
 testStreamAmount = TestCase $
     let
         getKey = snd . initExprEval
-
         lt = BinOp LessThan
         numVal = Val . VNum
         tt = lt (numVal 0) (numVal 5)
-
         expr = BinOp LogicalOr tt tt
     in
         assertEqual "Expect 3" 3 (getKey tt) >>
@@ -88,11 +77,9 @@ testUnaryOperationLogicalNot = TestCase $
         lt = BinOp LessThan
         numVal = Val . VNum
         tt = lt (numVal 0) (numVal 5)
-
         notExpr = UnOp LogicalNot
-
         expr1 = notExpr tt
-        expr2 = notExpr $ notExpr tt
+        expr2 = notExpr expr1
     in
         assertEqual "Should be false" (Ver FFalse) (s 0 expr1 0 devices Nothing 25)  >>
         assertEqual "Should be true" (Ver TTrue) (s 0 expr2 0 devices Nothing 25)
@@ -100,13 +87,10 @@ testUnaryOperationLogicalNot = TestCase $
 testUnaryOperationNegate = TestCase $
     let
         numVal = Val . VNum
-        negateExpr = UnOp Negate . numVal
-
-        expr1 = negateExpr 30
-        expr2 = negateExpr (-20)
+        expr = UnOp Negate . numVal
     in
-        assertEqual "Should be false" (Num (-30)) (s 0 expr1 0 devices Nothing 25)  >>
-        assertEqual "Should be true" (Num 20) (s 0 expr2 0 devices Nothing 25)
+        assertEqual "Should be false" (Num (-30)) (s 0 (expr 30) 0 devices Nothing 25)  >>
+        assertEqual "Should be true" (Num 20) (s 0 (expr (-20)) 0 devices Nothing 25)
 
 testAlwaysExpression = TestCase $
     let
@@ -151,8 +135,8 @@ testEventuallyExpression = TestCase $
         assertEqual "Should be True"      (Ver TTrue)     (s 0 expr2 20 devices Nothing 60)
 
 
-rulesTest :: Test
-rulesTest = TestList
+expressionTests :: Test
+expressionTests = TestList
     [
         TestLabel "Time Constant Test" testTimeVal,
         TestLabel "Constant Val Test" testConstantVal,

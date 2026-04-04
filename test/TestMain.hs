@@ -2,7 +2,8 @@ module Main where
 
 import Test.HUnit
 import StreamTests.VerdictTest ( verdictTests )
-import StreamTests.RulesTest ( rulesTest )
+import StreamTests.ExpressionTests ( expressionTests )
+import StreamTests.PropertyTests ( propertyTests )
 import System.IO ( stdout )
 import System.Exit (exitSuccess, exitFailure)
 
@@ -11,7 +12,8 @@ allTests :: Test
 allTests = TestList 
     [ 
         TestLabel "Verdict Logic" verdictTests,
-        TestLabel "Rules Logic" rulesTest
+        TestLabel "Expression Logic" expressionTests,
+        TestLabel "Property Logic" propertyTests
     ]
 
 
