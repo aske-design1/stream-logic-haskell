@@ -2,7 +2,8 @@ module Stream.Types where
 
 import Stream.Verdict ( Verdict, Verdict(TTrue) )
 
-import qualified Data.IntMap.Strict as M
+import qualified Data.IntMap.Strict as IntM
+import Data.Sequence as S
 
 data SOutput = Str String | Ver Verdict | Num Int
     deriving (Show, Eq)
@@ -33,13 +34,24 @@ instance Num SOutput where
     negate _ = undefined
 
 -- Types
-type EIoT = Maybe (String, Int, Verdict)
+type IoT = (String, Int, Verdict)
+type EIoT = Maybe IoT 
 
-type StreamD = Int -> EIoT -> Int -> SOutput
-type StreamO = Int -> Verdict
-type StreamDI = Int -> M.IntMap Verdict
+type StreamIoT = Int -> [IoT]
+type Devices = S.Seq [IoT] 
 
-type Env = (M.IntMap StreamO, M.IntMap StreamDI, M.IntMap StreamD)
+type SDIState = IntM.IntMap Verdict
+data StreamOutState = State {
+    verdicts :: SDIState,
+    insert :: Int -> SDIState -> SDIState,
+    update :: Devices  -> Int -> SDIState -> SDIState,
+    getColVerdict :: SDIState -> Verdict,
+    cleanUp :: SDIState -> SDIState
+}
+type StreamO = StreamOutState
+type StreamD = Int -> Devices -> EIoT -> Int -> SOutput
+
+type Env = (IntM.IntMap StreamO, IntM.IntMap StreamD)
 
 
 -- Helper Functions

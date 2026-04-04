@@ -1,26 +1,40 @@
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 module Stream.Rules.Property where
 
 import qualified Data.IntMap as M
 
 import Program.CST
+    ( Property(..),
+      MTLBound(Range, None),
+      MTLElement(Eventually, Always) )
 import Stream.Types
+    ( Env,
+      getVerUnsafe,
+      StreamOutState(State, cleanUp, verdicts, insert, update,
+                     getColVerdict) )
 import Stream.Rules.Expression (evalExpr)
+import Stream.Verdict (Verdict(..), (&&&), (|||))
 
---todo: temp
-initEnv :: Env
-initEnv = (M.empty, M.empty, M.empty) :: Env
-
---todo: Set up Property Rules
 evalProp :: Property -> Int -> Env -> (Env, Int)
 
-evalProp (Comp p1 p2) k env = evalProp p2 k' env'
+evalProp (Comp p1 p2) k env = evalProp p2  k' env'
     where
         (env', k') = evalProp p1 k env
 
-evalProp (Prop Always bounds e) k (so, sdi, sd) = undefined
+evalProp (Prop mtl bounds e) k (so, sd) = ((M.insert k streamO so, sd'), k')
     where
-        (sd', k') = evalExpr e (k + 2) sd
+        (sd', k') = evalExpr e (k + 1) sd
 
-        --todo: add logic - This one's tough
+        insertFunc None t stream  = M.insert t Undecided stream
+        insertFunc (Range r1 r2) t stream  = if r1 <= t && t <= r2 then M.insert t Undecided stream else stream
+        updateFunc s ds t = M.mapWithKey (\i _ -> getVerUnsafe $ s i ds Nothing t)
+        
+        getColVerdictFunc Always = M.foldl (&&&) TTrue
+        getColVerdictFunc Eventually = M.foldl (|||) FFalse
 
+        streamO = State {
+            verdicts = M.empty,
+            insert = insertFunc bounds,
+            update = updateFunc (sd' M.! (k+1)) ,
+            getColVerdict = getColVerdictFunc mtl,
+            cleanUp = M.filter (/= Undecided)
+        }

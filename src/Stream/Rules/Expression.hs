@@ -9,7 +9,6 @@ import Data.Function (on)
 
 type StreamDMap = M.IntMap StreamD
 
-
 evalExpr :: Expr -> Int -> StreamDMap -> (StreamDMap, Int)
 
 -- Base Cases: Constant, Member & Time
@@ -17,12 +16,12 @@ evalExpr (Val vType) key streamDEnv = (M.insert key f streamDEnv, key + 1)
     where
         f = valType vType
 
-        valType (VNum v) = \_ _ _ -> Num v
-        valType (VStr v) = \_ _ _ -> Str v
-        valType VTime = \_ _ t' -> Num t'
-        valType (Member Name) = \_ m _ -> maybe undefined (\(n,_,_) -> Str n) m
-        valType (Member Power) = \_ m _ -> maybe undefined (\(_,p,_) -> Num p) m
-        valType (Member Active) = \_ m _ -> maybe undefined (\(_,_,a) -> Ver a) m
+        valType (VNum v) = \_ _ _ _ -> Num v
+        valType (VStr v) = \_ _ _ _ -> Str v
+        valType VTime = \_ _ _ t' -> Num t'
+        valType (Member Name) = \_ _ m _ -> maybe undefined (\(n,_,_) -> Str n) m
+        valType (Member Power) = \_ _ m _ -> maybe undefined (\(_,p,_) -> Num p) m
+        valType (Member Active) = \_ _ m _ -> maybe undefined (\(_,_,a) -> Ver a) m
 
 -- Binary Operation
 evalExpr (BinOp binOp e1 e2) k streamDEnv = (M.insert k f env2, k'')
@@ -33,7 +32,7 @@ evalExpr (BinOp binOp e1 e2) k streamDEnv = (M.insert k f env2, k'')
         s1 = env2 M.! (k+1)
         s2 = env2 M.! k'
 
-        f t d t' = streamOp binOp (s1 t d t') (s2 t d t')
+        f t ds d t' = streamOp binOp (s1 t ds d t') (s2 t ds d t')
 
         streamOp Plus = (+)
         streamOp Minus = (-)
@@ -47,7 +46,7 @@ evalExpr (UnOp op e) k env = (M.insert k f env', k')
 
         s1 = env' M.! (k+1)
 
-        f = ((streamOp op .) .) . s1
+        f = (((streamOp op .) .) .) . s1
 
         streamOp Negate = negate
         streamOp LogicalNot = Ver . nnot . getVerUnsafe
@@ -64,7 +63,7 @@ evalExpr (MTLExpr mtl bounds e) k env = (M.insert k f env', k')
         isFinalVerdict Always p = if p then Undecided else TTrue 
         isFinalVerdict Eventually p = if p then Undecided else FFalse 
 
-        f t d t' = Ver giveVerdict
+        f t ds d t' = Ver giveVerdict
             where
                 s1 = env' M.! (k+1)
 
@@ -76,4 +75,4 @@ evalExpr (MTLExpr mtl bounds e) k env = (M.insert k f env', k')
                 upper = min t' (t + b)
 
                 finalVer = isFinalVerdict mtl (t' < t + b)
-                giveVerdict = verdictLogic mtl (finalVer : [getVerUnsafe (s1 i d t') | i <- [lower..upper]])
+                giveVerdict = verdictLogic mtl (finalVer : [getVerUnsafe (s1 i ds d t') | i <- [lower..upper]])

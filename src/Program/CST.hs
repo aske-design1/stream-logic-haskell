@@ -35,5 +35,4 @@ data MTLElement = Always | Eventually deriving (Show, Eq)
 data MTLBound = None | Range Int Int deriving (Show, Eq)
 
 data Property = Prop MTLElement MTLBound Expr | Comp Property Property
-
 type Program = Property 

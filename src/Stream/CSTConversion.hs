@@ -1,16 +1,16 @@
 module Stream.CSTConversion where
 
 import qualified Data.IntMap as M
+import Stream.Rules.Property ( evalProp )
 
-import Program.CST as C 
-import Stream.Types as T
+import Program.CST ( Program )  
+import Stream.Types ( StreamD, Env )
 
 type StreamDMap = M.IntMap StreamD
 
 initEnv :: Env
-initEnv = (M.empty, M.empty, M.empty) :: Env
+initEnv = (M.empty, M.empty) :: Env
 
--- todo: Set up func to start conversion
 convertCSTToStreams :: Program -> Env
-convertCSTToStreams _ = undefined
+convertCSTToStreams prog = fst $ evalProp prog 0 initEnv 
 
