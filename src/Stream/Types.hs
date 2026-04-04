@@ -32,6 +32,7 @@ instance Num SOutput where
 
     negate (Num a) = Num (negate a)
     negate _ = undefined
+    
 
 -- Types
 type IoT = (String, Int, Verdict)

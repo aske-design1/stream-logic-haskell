@@ -52,13 +52,19 @@ testBinaryOperationPlus = TestCase $
 
 testBinaryOperationLogicalOr = TestCase $
     let
+        n = Val . VNum
+        expr1 = BinOp LessThan (Val VTime) (n 50) 
+
         lt = BinOp LessThan
         numVal = Val . VNum
         tt = lt (numVal 0) (numVal 5)
         ff = lt (numVal 5) (numVal 5)
         expr = BinOp LogicalOr
     in
-        assertEqual "Should be false" (Ver FFalse) (s 0 (expr ff ff) 0 devices Nothing 25) >>
+        assertEqual "Check whether expression holds before 50" (Ver TTrue) (s 0 expr1 0 devices Nothing 49) >>
+        assertEqual "Check whether expression holds at 50" (Ver FFalse) (s 0 expr1 0 devices Nothing 50) >>
+        assertEqual "Check whether expression holds after 50" (Ver FFalse) (s 0 expr1 0 devices Nothing 51) >>
+        assertEqual "Should be false" (Ver FFalse) (s 0 (expr ff ff) 0 devices Nothing  25) >>
         assertEqual "Should be true" (Ver TTrue) (s 0 (expr ff tt) 0 devices Nothing 25)
 
 testStreamAmount = TestCase $
