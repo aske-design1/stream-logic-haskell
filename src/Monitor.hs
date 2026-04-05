@@ -17,6 +17,7 @@ monitor (so, _) time devicesOverTime shouldPrint = foldM_ stepMonitor (toArray s
             zipWithM (\so' propNum -> do
                         -- Insert t
                         let withNewT = So.insert so' (So.verdicts so') t
+                        
                         -- Eval the streams
                         let evaluatedSo = So.update so' withNewT devicesOverTime t
 

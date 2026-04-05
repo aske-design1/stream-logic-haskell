@@ -6,6 +6,7 @@ import Program.CST
 import Stream.Types
 import Stream.Verdict
 import Data.Function (on)
+import qualified Data.Sequence as S
 
 type StreamDMap = M.IntMap StreamD
 
@@ -18,6 +19,7 @@ evalExpr (Val vType) key streamDEnv = (M.insert key f streamDEnv, key + 1)
 
         valType (VNum v) = \_ _ _ _ -> Num v
         valType (VStr v) = \_ _ _ _ -> Str v
+        valType (VBool v) = \_ _ _ _ -> (Ver . asVerdict) v
         valType VTime = \_ _ _ t' -> Num t'
         valType (Member Name) = \_ _ m _ -> maybe undefined (\(n,_,_) -> Str n) m
         valType (Member Power) = \_ _ m _ -> maybe undefined (\(_,p,_) -> Num p) m
@@ -34,10 +36,20 @@ evalExpr (BinOp binOp e1 e2) k streamDEnv = (M.insert k f env2, k'')
 
         f t ds d t' = streamOp binOp (s1 t ds d t') (s2 t ds d t')
 
+        unpackAndOperate binOperator wrapper unwrap = (wrapper .) . binOperator `on` unwrap
+
         streamOp Plus = (+)
         streamOp Minus = (-)
-        streamOp LogicalOr = (Ver .) . (|||) `on` getVerUnsafe
-        streamOp LessThan = ((Ver . asVerdict) .) . (<) `on` getNumUnsafe
+        streamOp Mult = (*)
+        streamOp Division = unpackAndOperate div Num getNumUnsafe
+        streamOp Modulo = unpackAndOperate mod Num getNumUnsafe
+
+        streamOp LogicalEq = ((Ver . asVerdict) .) . (==)
+        streamOp LogicalNotEq = ((Ver . asVerdict) .) . (/=)
+        streamOp LogicalOr = unpackAndOperate (|||) Ver getVerUnsafe
+        streamOp LogicalAnd = unpackAndOperate (&&&) Ver getVerUnsafe
+        streamOp LessThan = unpackAndOperate (<) (Ver . asVerdict) getNumUnsafe
+        streamOp LessThanOrEq = unpackAndOperate (<=) (Ver . asVerdict) getNumUnsafe
 
 -- Unary
 evalExpr (UnOp op e) k env = (M.insert k f env', k')
@@ -57,17 +69,17 @@ evalExpr (MTLExpr mtl bounds e) k env = (M.insert k f env', k')
     where
         (env', k') = evalExpr e (k+1) env
 
-        verdictLogic Always = vConjunction 
-        verdictLogic Eventually = vDisjunction 
-        
-        isFinalVerdict Always p = if p then Undecided else TTrue 
-        isFinalVerdict Eventually p = if p then Undecided else FFalse 
+        verdictLogic Always = vConjunction
+        verdictLogic Eventually = vDisjunction
+
+        isFinalVerdict Always p = if p then Undecided else TTrue
+        isFinalVerdict Eventually p = if p then Undecided else FFalse
 
         f t ds d t' = Ver giveVerdict
             where
                 s1 = env' M.! (k+1)
 
-                (a, b) = case bounds of 
+                (a, b) = case bounds of
                     None -> (0, t'+1)
                     Range r1 r2 -> (r1, r2)
 
@@ -76,3 +88,29 @@ evalExpr (MTLExpr mtl bounds e) k env = (M.insert k f env', k')
 
                 finalVer = isFinalVerdict mtl (t' < t + b)
                 giveVerdict = verdictLogic mtl (finalVer : [getVerUnsafe (s1 i ds d t') | i <- [lower..upper]])
+
+-- Sum
+evalExpr (Sum e) k env = (M.insert k f env', k')
+    where
+        (env', k') = evalExpr e (k+1) env
+
+        s1 = env' M.! (k+1)
+
+        f t ds _ t' = Num . sum $ [toNumCoercion $ s1 t ds (Just d') t' | d' <- S.index ds t'] 
+
+-- Foreach
+evalExpr (Foreach e) k env = (M.insert k f env', k')
+    where
+        (env', k') = evalExpr e (k+1) env
+
+        s1 = env' M.! (k+1)
+
+        f t ds _ t' = Ver . vConjunction $ [toVerdictCoercion $ s1 t ds (Just d') t' | d' <- S.index ds t']
+
+evalExpr (Sumtime e) k env = (M.insert k f env', k')
+    where
+        (env', k') = evalExpr (Sum e) (k+1) env
+
+        s1 = env' M.! (k+1)
+
+        f t ds d t' = sum [s1 t ds d i | i <- [t..t']]

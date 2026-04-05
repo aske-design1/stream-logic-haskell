@@ -1,15 +1,24 @@
 module Stream.Types where
 
-import Stream.Verdict ( Verdict, Verdict(TTrue) )
+import Stream.Verdict ( Verdict (..), Verdict(TTrue) )
 
 import qualified Data.IntMap.Strict as IntM
 import Data.Sequence as S
+
+import GHC.Stack (HasCallStack)
 
 data SOutput = Str String | Ver Verdict | Num Int
     deriving (Show, Eq)
 
 instance Num SOutput where
     (Num a) + (Num b) = Num (a + b)
+    (Ver a) + (Num b) 
+        | a == TTrue = Num $ 1 + b
+        | otherwise = Num b
+    (Num a) + (Ver b) 
+        | b == TTrue = Num $ 1 + a
+        | otherwise = Num a
+
     _ + _ = undefined
 
     (Num a) - (Num b) = Num (a - b)
@@ -68,14 +77,31 @@ getNumSafe :: SOutput -> Maybe Int
 getNumSafe (Num v) = Just v
 getNumSafe _ = Nothing
 
-getVerUnsafe :: SOutput -> Verdict
+
+getVerUnsafe :: HasCallStack => SOutput -> Verdict
 getVerUnsafe (Ver v) = v
-getVerUnsafe _ = undefined
+getVerUnsafe x       = error $ "Typecheck error: Expected Verdict, got " ++ show x
 
-getStrUnsafe :: SOutput -> String
+getStrUnsafe :: HasCallStack => SOutput -> String
 getStrUnsafe (Str v) = v
-getStrUnsafe _ = undefined
+getStrUnsafe x = error $ "Typecheck error: Expected String, got " ++ show x
 
-getNumUnsafe :: SOutput -> Int
+getNumUnsafe :: HasCallStack => SOutput -> Int
 getNumUnsafe (Num v) = v
-getNumUnsafe _ = undefined
+getNumUnsafe x = error $ "Typecheck error: Expected Number, got " ++ show x
+
+toVerdictCoercion :: SOutput -> Verdict
+toVerdictCoercion (Num n) 
+    | n == 0 = FFalse
+    | otherwise = TTrue
+
+toVerdictCoercion (Ver v) = v
+
+toVerdictCoercion x = error $ "Typecheck error: Expected Verdict or Number, got " ++ show x
+
+toNumCoercion :: SOutput -> Int
+toNumCoercion (Num n) = n
+toNumCoercion (Ver v)
+    | v == TTrue = 1
+    | otherwise = 0
+toNumCoercion x = error $ "Typecheck error: Expected Verdict or Number, got " ++ show x

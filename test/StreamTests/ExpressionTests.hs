@@ -67,6 +67,35 @@ testBinaryOperationLogicalOr = TestCase $
         assertEqual "Should be false" (Ver FFalse) (s 0 (expr ff ff) 0 devices Nothing  25) >>
         assertEqual "Should be true" (Ver TTrue) (s 0 (expr ff tt) 0 devices Nothing 25)
 
+testBinaryOperations = TestCase $
+    let
+        num = Val . VNum
+        bool = Val . VBool
+        bo = BinOp
+
+        -- Arithmetic
+        minus  = bo Minus    (num 30) (num 15)
+        mult   = bo Mult     (num 2)  (num 8)
+        divide = bo Division (num 20) (num 4)
+        modulo = bo Modulo   (num 10) (num 3)
+
+        -- Logic / Comparison
+        lAnd   = bo LogicalAnd    (bool True)  (bool False) 
+        lEq    = bo LogicalEq     (num 5)  (num 5)
+        lNEq   = bo LogicalNotEq  (num 5)  (num 10)
+        ltOrEq = bo LessThanOrEq  (num 5)  (num 10)
+        
+        run expr = s 0 expr 0 devices Nothing 10
+    in do
+        assertEqual "Check minus"  (Num 15)     (run minus)
+        assertEqual "Check mult"   (Num 16)     (run mult)
+        assertEqual "Check div"    (Num 5)      (run divide)
+        assertEqual "Check mod"    (Num 1)      (run modulo)
+        assertEqual "Check And"    (Ver FFalse) (run lAnd)
+        assertEqual "Check Eq"     (Ver TTrue)  (run lEq)
+        assertEqual "Check NEq"    (Ver TTrue)  (run lNEq)
+        assertEqual "Check LTe"    (Ver TTrue)  (run ltOrEq)
+
 testStreamAmount = TestCase $
     let
         getKey = snd . initExprEval
@@ -140,6 +169,27 @@ testEventuallyExpression = TestCase $
         assertEqual "Should be True"      (Ver TTrue)     (s 0 expr2 10 devices Nothing 40) >>
         assertEqual "Should be True"      (Ver TTrue)     (s 0 expr2 20 devices Nothing 60)
 
+testSumExpression = TestCase $
+    let sumExpr = Sum $ BinOp Plus (Val . VNum $ 5) (Val . Member $ Power)
+        devices = S.fromList [[(undefined, 15, undefined), (undefined, 10, undefined), (undefined, 5, undefined)]]
+    in assertEqual "Check Sum of Devices" (20 + 15 + 10) (s 0 sumExpr 0 devices Nothing 0) 
+
+testForeachExpression = TestCase $
+    let 
+        foreachExpr = Foreach $ BinOp LessThanOrEq (Val . VNum $ 6) (Val . Member $ Power)
+        devices =  S.fromList [[(undefined, 15, undefined), (undefined, 10, undefined), (undefined, 5, undefined)]]
+        devices2 = S.fromList [[(undefined, 15, undefined), (undefined, 10, undefined), (undefined, 6, undefined)]]
+    in 
+        assertEqual "Check foreach device when one is false" (Ver FFalse) (s 0 foreachExpr 0 devices Nothing 0) >>
+        assertEqual "Check foreach device when all are true" (Ver TTrue) (s 0 foreachExpr 0 devices2 Nothing 0) 
+
+testSumtimeExpression = TestCase $
+    let
+        sumtimeExpr = Sumtime (Val . Member $ Power)
+        devices = S.fromList [[(undefined, 15, undefined), (undefined, 10, undefined), (undefined, x, undefined)] | x <- [0..30]]
+    in 
+        assertEqual "Check Sumtime from t = 0..30" (Num (25*31 + (31 * (0+30)) `div` 2)) (s 0 sumtimeExpr 0 devices Nothing 30) >>
+        assertEqual "Check Sumtime from t = 15..30" (Num (25*16 + (16 * (15+30)) `div` 2)) (s 0 sumtimeExpr 15 devices Nothing 30)
 
 expressionTests :: Test
 expressionTests = TestList
@@ -148,9 +198,13 @@ expressionTests = TestList
         TestLabel "Constant Val Test" testConstantVal,
         TestLabel "Binary Operation Plus Test" testBinaryOperationPlus,
         TestLabel "Binary Operation Logical Or Test" testBinaryOperationLogicalOr,
+        TestLabel "Check Remaining Binary Operations" testBinaryOperationLogicalOr,
         TestLabel "Check whether correct stream amount is created" testStreamAmount,
         TestLabel "Unary Operation Logical not Test" testUnaryOperationLogicalNot,
         TestLabel "Unary Operation Negate Test" testUnaryOperationNegate,
         TestLabel "Always Expression Test" testAlwaysExpression,
-        TestLabel "Eventually Expression Test" testEventuallyExpression
+        TestLabel "Eventually Expression Test" testEventuallyExpression,
+        TestLabel "Sum Expression Test" testSumExpression,
+        TestLabel "Foreach Expression Test" testForeachExpression,
+        TestLabel "Sumtime expression Test" testSumtimeExpression
     ]

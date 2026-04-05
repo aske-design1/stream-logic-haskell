@@ -3,8 +3,15 @@ module Program.CST where
 data BinaryOp = 
     Plus | 
     Minus | 
+    Mult |
+    Division |
+    Modulo |
     LogicalOr | 
-    LessThan 
+    LogicalAnd |
+    LogicalEq |
+    LogicalNotEq |
+    LessThan |
+    LessThanOrEq 
     
     deriving (Show, Eq)
 
@@ -19,6 +26,7 @@ data Value =
     VNum Int | 
     VStr String |
     VTime |
+    VBool Bool |
     Member Member
     
     deriving (Show, Eq)
@@ -27,7 +35,10 @@ data Expr =
     Val Value | 
     BinOp BinaryOp Expr Expr | 
     UnOp UnaryOp Expr |
-    MTLExpr MTLElement MTLBound Expr
+    MTLExpr MTLElement MTLBound Expr |
+    Sum Expr |
+    Foreach Expr |
+    Sumtime Expr
     
     deriving (Show, Eq)
 
