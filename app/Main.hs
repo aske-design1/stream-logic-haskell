@@ -7,8 +7,8 @@ import Stream.Verdict ( Verdict(TTrue) )
 import Stream.CSTConversion (convertCSTToStreams)
 
 main :: IO ()
-main = monitor env time devices True
-    where
+main = 
+    let 
         -- Create Expression
         n = Val . VNum
         expr = BinOp LessThan (Val VTime) (n 50)
@@ -21,5 +21,6 @@ main = monitor env time devices True
 
         -- Device Logic:
         devices = S.fromList [[("Roomba", x * mult, TTrue)] | x <- time, let mult = if even x then 20 else 10]
-
+    in
+        monitor env time devices True
 
