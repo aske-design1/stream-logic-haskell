@@ -17,13 +17,16 @@ evalExpr (Val vType) key streamDEnv = (M.insert key f streamDEnv, key + 1)
     where
         f = valType vType
 
-        valType (VNum v) = \_ _ _ _ -> Num v
-        valType (VStr v) = \_ _ _ _ -> Str v
-        valType (VBool v) = \_ _ _ _ -> (Ver . asVerdict) v
-        valType VTime = \_ _ _ t' -> Num t'
-        valType (Member Name) = \_ _ m _ -> maybe undefined (\(n,_,_) -> Str n) m
-        valType (Member Power) = \_ _ m _ -> maybe undefined (\(_,p,_) -> Num p) m
-        valType (Member Active) = \_ _ m _ -> maybe undefined (\(_,_,a) -> Ver a) m
+        valType (VNum v)        = \_ _ _ _  -> Num v
+        valType (VStr v)        = \_ _ _ _  -> Str v
+        valType (VBool v)       = \_ _ _ _  -> Ver . asVerdict $ v
+        valType VTime           = \_ _ _ t' -> Num t'
+        valType (Member field) = \_ _ m _ -> case m of
+            Nothing -> error $ "A device was not supplied to allow for " ++ show field
+            Just (n, p, a) -> case field of
+                Name   -> Str n
+                Power  -> Num p
+                Active -> Ver a
 
 -- Binary Operation
 evalExpr (BinOp binOp e1 e2) k streamDEnv = (M.insert k f env2, k'')
@@ -41,15 +44,15 @@ evalExpr (BinOp binOp e1 e2) k streamDEnv = (M.insert k f env2, k'')
         streamOp Plus = (+)
         streamOp Minus = (-)
         streamOp Mult = (*)
-        streamOp Division = unpackAndOperate div Num getNumUnsafe
-        streamOp Modulo = unpackAndOperate mod Num getNumUnsafe
+        streamOp Division = unpackAndOperate div Num toNumCoercion
+        streamOp Modulo = unpackAndOperate mod Num toNumCoercion
 
         streamOp LogicalEq = ((Ver . asVerdict) .) . (==)
         streamOp LogicalNotEq = ((Ver . asVerdict) .) . (/=)
-        streamOp LogicalOr = unpackAndOperate (|||) Ver getVerUnsafe
-        streamOp LogicalAnd = unpackAndOperate (&&&) Ver getVerUnsafe
-        streamOp LessThan = unpackAndOperate (<) (Ver . asVerdict) getNumUnsafe
-        streamOp LessThanOrEq = unpackAndOperate (<=) (Ver . asVerdict) getNumUnsafe
+        streamOp LogicalOr = unpackAndOperate (|||) Ver toVerdictCoercion
+        streamOp LogicalAnd = unpackAndOperate (&&&) Ver toVerdictCoercion
+        streamOp LessThan = unpackAndOperate (<) (Ver . asVerdict) toNumCoercion
+        streamOp LessThanOrEq = unpackAndOperate (<=) (Ver . asVerdict) toNumCoercion
 
 -- Unary
 evalExpr (UnOp op e) k env = (M.insert k f env', k')
@@ -87,7 +90,7 @@ evalExpr (MTLExpr mtl bounds e) k env = (M.insert k f env', k')
                 upper = min t' (t + b)
 
                 finalVer = isFinalVerdict mtl (t' < t + b)
-                giveVerdict = verdictLogic mtl (finalVer : [getVerUnsafe (s1 i ds d t') | i <- [lower..upper]])
+                giveVerdict = verdictLogic mtl (finalVer : [toVerdictCoercion (s1 i ds d t') | i <- [lower..upper]])
 
 -- Sum
 evalExpr (Sum e) k env = (M.insert k f env', k')
